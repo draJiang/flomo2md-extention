@@ -1,0 +1,24 @@
+/* @font-face {
+    font-family: 'OPPOSans-R';
+    src: url('../../public/font/OPPOSans-R.ttf') format('truetype');
+}
+
+body {
+    font-family: 'OPPOSans-R';
+    margin: 0;
+    padding: 20px;
+    border-radius: 4px;
+} */
+
+#MyOptions {
+    width: 380px;
+}
+
+#MyOptions h2 {
+    margin-top: 0;
+}
+
+#MyOptions img {
+    width: 68%;
+    border-radius: 4px;
+}
