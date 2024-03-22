@@ -181,7 +181,17 @@ function getImageDataSourceValues(html: string): (string | null)[] {
 const html2md = async (htmlString: string) => {
 
   let markdownStr = await htmlToMarkdown({ html: htmlString });
+  // 标签
   markdownStr = markdownStr.replace(/\\#/g, '#');
+  // 分隔线
+  markdownStr = markdownStr.replace(/\\---/g, '---');
+  // 无序列表
+  markdownStr = markdownStr.replace(/\\- /g, '- ');
+  // 有序列表
+  markdownStr = markdownStr.replace(/\\\. /g, '. ');
+  // 加粗
+  markdownStr = markdownStr.replace(/\\\*\\\*/g, "**");
+
   return markdownStr
 }
 
