@@ -48,6 +48,8 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           memo.files.forEach((img, i) => {
             md += `![image](images/${memo.time2}_${i}.png)`
           });
+          //创建时间信息
+          md+=`\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
 
           return {
             id: memo.id,
@@ -178,8 +180,9 @@ function getImageDataSourceValues(html: string): (string | null)[] {
 // html 转为 md 格式
 const html2md = async (htmlString: string) => {
 
-  const markdownStr = await htmlToMarkdown({ html: htmlString });
-  return markdownStr.replace('\\#', '#')
+  let markdownStr = await htmlToMarkdown({ html: htmlString });
+  markdownStr = markdownStr.replace(/\\#/g, '#');
+  return markdownStr
 }
 
 // 下载笔记
