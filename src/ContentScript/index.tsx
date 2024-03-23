@@ -49,7 +49,7 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
             md += `![image](images/${memo.time2}_${i}.png)`
           });
           //创建时间信息
-          md+=`\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+          md += `\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
 
           return {
             id: memo.id,
@@ -201,11 +201,20 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
   // 存放所有图片下载任务的数组
   let imagesTasks: Promise<void>[] = [];
   // 遍历每一个 memo
+  const memosLength = (memos.length).toString().length
   memos.forEach((memo, i) => {
     const title = memo.time2
+
+    // 处理文件序号
+    const thisLength = i.toString().length
+    let index = ''
+    for (let i = 0; i < memosLength - thisLength; i++) {
+      index += '0'
+    }
+
     // 在 zip 文件中添加一个新的 md 文件
     const content = memo.content
-    zip.file(`${title}.md`, content);
+    zip.file(`${title}_${index + (i + 1)}.md`, content);
     // 下载图片
     memo.files.forEach((imgUrl, i) => {
 
@@ -213,7 +222,7 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
         const promise = fetch(imgUrl)
           .then(response => response.blob())
           .then(imgData => {
-            zip.file(`images/${memo.time2}_${i}.png`, imgData);
+            zip.file(`images/${memo.time2}_${i + 1}.png`, imgData);
           });
         imagesTasks.push(promise);
       }
