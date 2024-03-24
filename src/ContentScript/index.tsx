@@ -6,6 +6,7 @@ import FileSaver from 'file-saver';
 
 import { getUserInfo } from "../utils/util"
 import { memoType } from "../types"
+import { memo } from 'react';
 
 
 let ANKI_INFO: any
@@ -46,7 +47,7 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           let md = await html2md(html)
           // 在 md 中添加图片
           memo.files.forEach((img, i) => {
-            md += `![image](images/${memo.time2}_${i}.png)`
+            md += `![image](images/${memo.time2}_${i + 1}.png)`
           });
           //创建时间信息
           md += `\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
@@ -137,8 +138,9 @@ function replaceHref(html: string, memos: memoType[]) {
   // 获取所有 href 属性值包含 'abcd' 的 a 标签
   const aTags = doc.querySelectorAll('a[href*="https://flomoapp.com/mine/?memo_id"]');
 
+  const memosLength = (memos.length).toString().length
   // 遍历所有的 a 标签
-  aTags.forEach(aTag => {
+  aTags.forEach((aTag, i) => {
     const anchor = aTag as HTMLAnchorElement;
     // 创建一个新的 URL 对象
     const url = new URL(anchor.href);
@@ -147,10 +149,27 @@ function replaceHref(html: string, memos: memoType[]) {
 
     if (memoId) {
       // 找到 mention 的卡片 ID
-      const memo = memos.find(item => item.id === memoId);
+      let result: null | { index: number, memo: memoType } = null
+
+      for (let i = 0; i < memos.length; i++) {
+        if (memos[i].id === memoId) {
+          result = { index: i, memo: memos[i] }
+          break
+        }
+      }
+
       // 设置 mention 卡片
-      if (memo) {
-        aTag.setAttribute('href', memo?.time2);
+      if (result) {
+
+        // 处理文件序号
+        const thisLength = result.index.toString().length
+        let index = ''
+        for (let i = 0; i < memosLength - thisLength; i++) {
+          index += '0'
+        }
+
+        const title = result.memo.time2
+        aTag.setAttribute('href', `${title}_${index + (result.index + 1)}`);
       }
 
     }
