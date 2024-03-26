@@ -54,6 +54,8 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
 
           return {
             id: memo.id,
+            name: memo.name,
+            index: memo.index,
             time: memo.time,
             time2: memo.time2,
             content: md,
@@ -99,6 +101,7 @@ async function getMemos(): Promise<memoType[]> {
   // 创建一个数组来保存解析后的 memo 对象
   const memos = [];
 
+  const memosLength = (memoEls.length).toString().length
   // 遍历每一个 "memo" 元素
   for (let i = 0; i < memoEls.length; i++) {
     const memoEl = memoEls[i];
@@ -116,13 +119,24 @@ async function getMemos(): Promise<memoType[]> {
     // const md = await html2md(richText)
     const time2 = time.replace(/\D/g, '');
 
+    // 处理文件序号
+    const thisLength = (i + 1).toString().length
+    let index = ''
+    for (let i = 0; i < memosLength - thisLength; i++) {
+      index += '0'
+    }
+    index += (i + 1).toString()
+
+    // 文件名称
+    const name = time2 + '_' + index
+
     // 获取图片
     const filesEl = memoEl.querySelector('.files')
     const filesHTML = filesEl ? filesEl.innerHTML : ''
     const files = getImageDataSourceValues(filesHTML)
 
     // 将解析后的 "memo" 对象添加到数组中
-    memos.push({ id, time, time2, content, files });
+    memos.push({ id, name, index, time, time2, content, files });
   }
 
   return memos;
@@ -149,27 +163,11 @@ function replaceHref(html: string, memos: memoType[]) {
 
     if (memoId) {
       // 找到 mention 的卡片 ID
-      let result: null | { index: number, memo: memoType } = null
-
-      for (let i = 0; i < memos.length; i++) {
-        if (memos[i].id === memoId) {
-          result = { index: i, memo: memos[i] }
-          break
-        }
-      }
+      const memo = memos.find(item => item.id === memoId);
 
       // 设置 mention 卡片
-      if (result) {
-
-        // 处理文件序号
-        const thisLength = result.index.toString().length
-        let index = ''
-        for (let i = 0; i < memosLength - thisLength; i++) {
-          index += '0'
-        }
-
-        const title = result.memo.time2
-        aTag.setAttribute('href', `${title}_${index + (result.index + 1)}`);
+      if (memo) {
+        aTag.setAttribute('href', `${memo.name}`);
       }
 
     }
@@ -222,18 +220,9 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
   // 遍历每一个 memo
   const memosLength = (memos.length).toString().length
   memos.forEach((memo, i) => {
-    const title = memo.time2
-
-    // 处理文件序号
-    const thisLength = i.toString().length
-    let index = ''
-    for (let i = 0; i < memosLength - thisLength; i++) {
-      index += '0'
-    }
-
     // 在 zip 文件中添加一个新的 md 文件
     const content = memo.content
-    zip.file(`${title}_${index + (i + 1)}.md`, content);
+    zip.file(`${memo.name}.md`, content);
     // 下载图片
     memo.files.forEach((imgUrl, i) => {
 

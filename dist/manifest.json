@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "flomo2md",
     "description": "Export Flomo notes to Markdown file.",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "action": {
         "default_icon": "icon48.png",
         "default_popup": "popup.html"
