@@ -34,7 +34,8 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
 
       autoScroll(memos as HTMLElement, msg.verified).then(async () => {
         // 解析笔记
-        let memoList: Array<memoType> = await getMemos()
+        let memoList: Array<memoType> = await getMemos(msg.options.autoRecognizeNoteTitle)
+
         if (!msg.verified) {
           //未激活
           memoList = memoList.slice(0, 20);
@@ -42,14 +43,13 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
 
         const newMemoListPromises = memoList.map(async memo => {
           // 处理笔记中的双链
-          const html = replaceHref(memo.content, memoList)
-          // 将内容转为 md 格式
-          let md = await html2md(html)
-          // 在 md 中添加图片
+          let md = memo.content
+          md = replaceHref(md, memoList)
+          // 图片信息
           memo.files.forEach((img, i) => {
             md += `![image](images/${memo.time2}_${i + 1}.png)`
           });
-          //创建时间信息
+          //创建时间、原始笔记信息
           md += `\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
 
           return {
@@ -62,6 +62,7 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
             files: memo.files
           }
         })
+
         const newMemoList: Array<memoType> = await Promise.all(newMemoListPromises);
         // 下载笔记
         createZipFileFromMarkdownStrings(newMemoList, 'flomo2md')
@@ -94,12 +95,14 @@ function autoScroll(memos: HTMLElement, verified: boolean): Promise<void> {
 }
 
 // 获取笔记
-async function getMemos(): Promise<memoType[]> {
+async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
   // 获取所有 className 为 "memo" 的 div 元素
   const memoEls = document.getElementsByClassName('memo');
 
   // 创建一个数组来保存解析后的 memo 对象
   const memos = [];
+  // 存储名称列表，避免文件名重复
+  let names: string[] = []
 
   const memosLength = (memoEls.length).toString().length
   // 遍历每一个 "memo" 元素
@@ -115,7 +118,10 @@ async function getMemos(): Promise<memoType[]> {
 
     // 获取 "time" 和 "richText" 元素的文本内容
     const time = timeEl ? (timeEl as HTMLElement).innerText : '';
-    const content = richTextEl ? richTextEl.innerHTML : '';
+    let content = richTextEl ? richTextEl.innerHTML : '';
+    // 转为 md 格式
+    content = await html2md(content)
+
     // const md = await html2md(richText)
     const time2 = time.replace(/\D/g, '');
 
@@ -128,7 +134,15 @@ async function getMemos(): Promise<memoType[]> {
     index += (i + 1).toString()
 
     // 文件名称
-    const name = time2 + '_' + index
+    let name: string | null = null
+    if (autoRecognizeNoteTitle) {
+      name = getMemoName(content, names)
+      name = name ? name : time2 + '_' + index
+    } else {
+      name = time2 + '_' + index
+    }
+
+    names.push(name)
 
     // 获取图片
     const filesEl = memoEl.querySelector('.files')
@@ -143,38 +157,124 @@ async function getMemos(): Promise<memoType[]> {
 }
 
 // 处理笔记中的链接
-function replaceHref(html: string, memos: memoType[]) {
-  // 创建一个 DOM 解析器
-  const parser = new DOMParser();
-  // 使用 DOM 解析器解析 html 字符串，得到一个 Document 对象
-  const doc = parser.parseFromString(html, 'text/html');
+function replaceHref(md: string, memos: memoType[]) {
+  let newMD = md
+  // 找到 flomo 内部的链接
+  const regex = /\[.*?\]\((https:\/\/flomoapp\.com\/mine\/\?memo_id=.*?)\)/g;
+  let match;
+  const links = [];
 
-  // 获取所有 href 属性值包含 'abcd' 的 a 标签
-  const aTags = doc.querySelectorAll('a[href*="https://flomoapp.com/mine/?memo_id"]');
+  while ((match = regex.exec(md)) !== null) {
+    links.push(match[0]);
+  }
 
-  const memosLength = (memos.length).toString().length
-  // 遍历所有的 a 标签
-  aTags.forEach((aTag, i) => {
-    const anchor = aTag as HTMLAnchorElement;
-    // 创建一个新的 URL 对象
-    const url = new URL(anchor.href);
-    // 获取 url 中的 memo_id 值
-    const memoId = url.searchParams.get('memo_id');
+  links.forEach(link => {
+    const urlMatch = link.match(/\((.*?)\)/);
+    if (urlMatch && urlMatch[1]) {
+      const urlObj = new URL(urlMatch[1]);
+      const params = new URLSearchParams(urlObj.search);
+      const memoId = params.get('memo_id');
 
-    if (memoId) {
-      // 找到 mention 的卡片 ID
-      const memo = memos.find(item => item.id === memoId);
+      if (memoId) {
+        // 找到 mention 的卡片 ID
+        let result: null | { index: number, memo: memoType } = null
 
-      // 设置 mention 卡片
-      if (memo) {
-        aTag.setAttribute('href', `${memo.name}`);
+        for (let i = 0; i < memos.length; i++) {
+          if (memos[i].id === memoId) {
+            result = { index: i, memo: memos[i] }
+            break
+          }
+        }
+
+        // 设置 mention 卡片
+        if (result) {
+
+          const title = result.memo.name
+          newMD = newMD.replace(link, `[MEMO](${title})`)
+
+        }
+
+      }
+    }
+
+
+  });
+
+  return newMD
+}
+
+// 处理笔记标题
+function getMemoName(md: string, names: string[]) {
+  // 从笔记内容中提取名称信息
+  let memoName = null
+  // 将输入的字符串以换行符分割为数组
+  let lines = md.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+
+    // 检查当前行是否为一级标题
+    if (line.startsWith('# ')) {
+      memoName = line.substring(2);
+      break
+    }
+  }
+
+  // 如果没有找到一级标题，则返回第一个不含有 '#tag' 的行
+  if (!memoName) {
+    // 移除首行中的 '#文字' 标签
+    let lineWithoutTag = lines[0].replace(/#\S+/g, '').trim() || lines[1].replace(/#\S+/g, '').trim() || lines[2].replace(/#\S+/g, '').trim();
+    if (lineWithoutTag) {
+      memoName = lineWithoutTag;
+    }
+  }
+
+  if (memoName) {
+    // 去除标题中的出链
+    memoName = memoName.replace(/\s*\[MEMO\]\(.*?\)\s*/g, '');
+    // 避免标题过长，截取第一句
+    let match = memoName.match(/.+?(，|——|。|？|！)/);  // 匹配直到第一个中文逗号、破折号、句号、问号、感叹号出现的所有字符
+    if (match) {
+      memoName = match[0].slice(0, -1);  // 移除收尾的中文逗号、破折号、句号、问号、感叹号
+    }
+    memoName = memoName.replace(/[<>:"/\\|?*\s]/g, '');
+    // 避免 name 重名
+    let newName = memoName
+    let count = 0
+    while (true) {
+      if (names.indexOf(newName) > -1) {
+        // 存在同名的笔记
+        newName = memoName + `(${count + 1})`
+        count++
+      } else {
+        // 不存在同名的笔记
+        memoName = newName
+        break
       }
 
     }
-  });
 
-  // 返回修改后的 HTML 字符串
-  return doc.body.innerHTML;
+    if (memoName.replace(/\ /g, '').length < 1) {
+      //名称只存在空格
+      return null
+    }
+
+
+    // let count = 0;
+    // for (let i = 0; i < names.length; i++) {
+    //   if (names[i] === memoName) {
+    //     count++;
+    //   }
+    // }
+
+    // if (count > 0) {
+    //   memoName += `(${count})`
+    // }
+
+  }
+
+  return memoName;
+
 }
 
 // 获取笔记中的图片
@@ -193,7 +293,6 @@ function getImageDataSourceValues(html: string): (string | null)[] {
   return dataSourceValues;
 }
 
-
 // html 转为 md 格式
 const html2md = async (htmlString: string) => {
 
@@ -208,6 +307,8 @@ const html2md = async (htmlString: string) => {
   markdownStr = markdownStr.replace(/\\\. /g, '. ');
   // 加粗
   markdownStr = markdownStr.replace(/\\\*\\\*/g, "**");
+  // 去除 #Tag 的加粗效果
+  markdownStr = markdownStr.replace(/\*\*(#.+?)\*\*/g, "$1");
 
   return markdownStr
 }
@@ -218,7 +319,6 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
   // 存放所有图片下载任务的数组
   let imagesTasks: Promise<void>[] = [];
   // 遍历每一个 memo
-  const memosLength = (memos.length).toString().length
   memos.forEach((memo, i) => {
     // 在 zip 文件中添加一个新的 md 文件
     const content = memo.content
