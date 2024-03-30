@@ -225,7 +225,7 @@ function getMemoName(md: string, names: string[]) {
     }
   }
 
-  // 如果没有找到一级标题，则返回第一个不含有 '#tag' 的行
+  // 如果没有找到一级标题
   if (!memoName) {
     // 移除首行中的 '#文字' 标签
     let lineWithoutTag = lines[0].replace(/#\S+/g, '').trim() || lines[1].replace(/#\S+/g, '').trim() || lines[2].replace(/#\S+/g, '').trim();
@@ -247,6 +247,12 @@ function getMemoName(md: string, names: string[]) {
     let newName = memoName
     let count = 0
     while (true) {
+
+      if (count > 100) {
+        // 避免死循环
+        return null
+      }
+
       if (names.indexOf(newName) > -1) {
         // 存在同名的笔记
         newName = memoName + `(${count + 1})`
@@ -263,18 +269,6 @@ function getMemoName(md: string, names: string[]) {
       //名称只存在空格
       return null
     }
-
-
-    // let count = 0;
-    // for (let i = 0; i < names.length; i++) {
-    //   if (names[i] === memoName) {
-    //     count++;
-    //   }
-    // }
-
-    // if (count > 0) {
-    //   memoName += `(${count})`
-    // }
 
   }
 
