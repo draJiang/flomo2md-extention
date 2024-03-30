@@ -236,7 +236,7 @@ function getMemoName(md: string, names: string[]) {
 
   if (memoName) {
     // 去除标题中的出链
-    memoName = memoName.replace(/\s*\[MEMO\]\(.*?\)\s*/g, '');
+    memoName = memoName.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '');
     // 避免标题过长，截取第一句
     let match = memoName.match(/.+?(，|——|。|？|！)/);  // 匹配直到第一个中文逗号、破折号、句号、问号、感叹号出现的所有字符
     if (match) {
@@ -248,7 +248,7 @@ function getMemoName(md: string, names: string[]) {
     let count = 0
     while (true) {
 
-      if (count > 100) {
+      if (count > 500) {
         // 避免死循环
         return null
       }

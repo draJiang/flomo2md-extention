@@ -108,7 +108,7 @@ const ExportToMD = (props: ExportToMDProps) => {
                     display: 'flex',
                 }}>
                     <input
-                        checked
+                        defaultChecked={true}
                         name='exportTimeInfo'
                         style={{
                             marginRight: '2px'
