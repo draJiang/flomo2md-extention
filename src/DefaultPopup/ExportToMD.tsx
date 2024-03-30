@@ -10,8 +10,7 @@ const ExportToMD = (props: ExportToMDProps) => {
 
     const [exportButtonClicked, setExportButtonClicked] = useState<boolean>(false);
     const [inFlomo, setInFlomo] = useState<boolean>(false);
-    const checkboxRef = useRef<HTMLInputElement>(null);
-
+    // const checkboxRef = useRef<HTMLInputElement>(null);
 
 
     useEffect(() => {
@@ -27,9 +26,15 @@ const ExportToMD = (props: ExportToMDProps) => {
 
     }, [])
 
-    const handleExport = () => {
+    const handleExport = (event: React.FormEvent) => {
+        event.preventDefault(); // 阻止表单默认提交行为
 
-        const autoRecognizeNoteTitle = checkboxRef.current?.checked
+        const exportFileNameInput = document.querySelector('form input[name="exportFileName"]');
+        const autoRecognizeNoteTitle = (exportFileNameInput as HTMLInputElement).checked;
+
+        const exportTimeInfoInput = document.querySelector('form input[name="exportTimeInfo"]');
+        const exportTimeInfoValue = (exportTimeInfoInput as HTMLInputElement).checked;
+
 
         setExportButtonClicked(true)
         // 通知 content Script 处理数据
@@ -40,7 +45,14 @@ const ExportToMD = (props: ExportToMDProps) => {
 
             if (activeTab && activeTab.id !== undefined) {
 
-                let b = browser.tabs.sendMessage(tID, { type: 'flomo2md', verified: props.verified, options: { autoRecognizeNoteTitle: autoRecognizeNoteTitle } })
+                let b = browser.tabs.sendMessage(tID, {
+                    type: 'flomo2md',
+                    verified: props.verified,
+                    options: {
+                        autoRecognizeNoteTitle: autoRecognizeNoteTitle,
+                        exportTimeInfoValue: exportTimeInfoValue
+                    }
+                })
 
             }
 
@@ -49,11 +61,14 @@ const ExportToMD = (props: ExportToMDProps) => {
     }
 
     return (
-        <div style={{
-            marginTop: '10px',
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
+        <form
+            name='form'
+            onSubmit={handleExport}
+            style={{
+                marginTop: '10px',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
             {
                 inFlomo ?
                     <Button
@@ -75,21 +90,35 @@ const ExportToMD = (props: ExportToMDProps) => {
                 fontSize: '0.9rem',
                 marginTop: '14px',
                 display: 'flex',
+                flexDirection: 'column',
                 justifyContent: 'center'
             }}>
                 <div style={{
                     display: 'flex',
                 }}>
                     <input
+                        name='exportFileName'
                         style={{
-                            marginRight:'2px'
+                            marginRight: '2px'
                         }}
-                        type='checkbox' ref={checkboxRef} onClick={() => {
+                        type='checkbox' onClick={() => {
                         }} /> 自动识别笔记标题作为文件名
+                </div>
+                <div style={{
+                    display: 'flex',
+                }}>
+                    <input
+                        checked
+                        name='exportTimeInfo'
+                        style={{
+                            marginRight: '2px'
+                        }}
+                        type='checkbox' onClick={() => {
+                        }} /> 导出笔记创建时间和 flomo 原始链接
                 </div>
             </div>
 
-        </div>
+        </form>
     );
 };
 

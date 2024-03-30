@@ -50,8 +50,11 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           memo.files.forEach((img, i) => {
             md += `![image](images/${memo.time2}_${i + 1}.png)`
           });
-          //创建时间、原始笔记信息
-          md += `\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+
+          if (msg.options.exportTimeInfoValue) {
+            //创建时间、原始笔记信息
+            md += `\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+          }
 
           return {
             id: memo.id,
@@ -124,7 +127,6 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
     content = await htmlTomd(content)
     //处理高亮
     content = content.replace(/<\/?mark>/g, '==');
-
     // const md = await html2md(richText)
     const time2 = time.replace(/\D/g, '');
 
