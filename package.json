@@ -23,6 +23,7 @@
     "eventsource-parser": "^0.1.0",
     "file-saver": "^2.0.5",
     "franc": "^6.1.0",
+    "html-to-md": "^0.8.5",
     "jszip": "^3.10.1",
     "langs": "^2.0.0",
     "language-detect": "^1.1.0",

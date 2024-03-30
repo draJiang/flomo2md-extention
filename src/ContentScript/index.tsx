@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 
-import htmlToMarkdown from '@wcj/html-to-markdown';
+// import htmlToMarkdown from '@wcj/html-to-markdown';
+import html2md from 'html-to-md'
 import JSZip from 'jszip';
 import FileSaver from 'file-saver';
 
@@ -120,7 +121,9 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
     const time = timeEl ? (timeEl as HTMLElement).innerText : '';
     let content = richTextEl ? richTextEl.innerHTML : '';
     // 转为 md 格式
-    content = await html2md(content)
+    content = await htmlTomd(content)
+    //处理高亮
+    content = content.replace(/<\/?mark>/g, '==');
 
     // const md = await html2md(richText)
     const time2 = time.replace(/\D/g, '');
@@ -294,9 +297,9 @@ function getImageDataSourceValues(html: string): (string | null)[] {
 }
 
 // html 转为 md 格式
-const html2md = async (htmlString: string) => {
+const htmlTomd = async (htmlString: string) => {
 
-  let markdownStr = await htmlToMarkdown({ html: htmlString });
+  let markdownStr = html2md(htmlString);
   // 标签
   markdownStr = markdownStr.replace(/\\#/g, '#');
   // 分隔线
