@@ -8,6 +8,7 @@ import FileSaver from 'file-saver';
 import { getUserInfo } from "../utils/util"
 import { memoType } from "../types"
 import { memo } from 'react';
+import { Options } from 'Options';
 
 
 let ANKI_INFO: any
@@ -48,12 +49,12 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           md = replaceHref(md, memoList)
           // 图片信息
           memo.files.forEach((img, i) => {
-            md += `![image](images/${memo.time2}_${i + 1}.png)`
+            md += `\n![image](images/${memo.time2}_${i + 1}.png)`
           });
 
           if (msg.options.exportTimeInfoValue) {
             //创建时间、原始笔记信息
-            md += `\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+            md += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
           }
 
           return {
@@ -106,7 +107,7 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
   // 创建一个数组来保存解析后的 memo 对象
   const memos = [];
   // 存储名称列表，避免文件名重复
-  let names: string[] = []
+  let names: (string | null)[] = []
 
   const memosLength = (memoEls.length).toString().length
   // 遍历每一个 "memo" 元素
@@ -139,12 +140,55 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
     index += (i + 1).toString()
 
     // 文件名称
-    let name: string | null = null
-    if (autoRecognizeNoteTitle) {
-      name = getMemoName(content, names)
-      name = name ? name : time2 + '_' + index
-    } else {
-      name = time2 + '_' + index
+    let name: string = ''
+    name = time2 + '_' + index
+
+    try {
+      if (autoRecognizeNoteTitle) {
+
+        // 处理文件名称
+        const newName = getMemoName(content, names)
+        name = newName ? newName : time2 + '_' + index
+
+        // 删除一级标题
+        // 将输入的字符串以换行符分割为数组
+        let lines = content.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+          let line = lines[i].trim();
+
+          // 检查当前行是否为一级标题
+          if (line.startsWith('# ')) {
+
+
+            const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/;
+            const hasMarkdownLink = markdownLinkRegex.test(line);
+            if (hasMarkdownLink) {
+              // 如果标题中包含链接
+              // 去除 # 符号
+              content = content.replace(line, line.substring(2))
+            } else {
+              // 删除正文中的标题信息，只保留文件名作为标题
+
+              // 将内容按行分割成数组
+              let contentLines = content.split('\n');
+
+              // 创建一个新数组，不包含要删除的行
+              contentLines = contentLines.filter((contentLine) => contentLine !== line);
+
+              // 将新数组拼接回文本形式
+              content = contentLines.join('\n');
+            }
+
+
+
+            break
+          }
+        }
+      }
+    } catch (error) {
+      console.log(error);
+
     }
 
     names.push(name)
@@ -209,7 +253,8 @@ function replaceHref(md: string, memos: memoType[]) {
 }
 
 // 处理笔记标题
-function getMemoName(md: string, names: string[]) {
+function getMemoName(md: string, names: (string | null)[]) {
+  let haveHeadling = false
   // 从笔记内容中提取名称信息
   let memoName = null
   // 将输入的字符串以换行符分割为数组
@@ -221,27 +266,52 @@ function getMemoName(md: string, names: string[]) {
     // 检查当前行是否为一级标题
     if (line.startsWith('# ')) {
       memoName = line.substring(2);
+      haveHeadling = true
       break
     }
   }
 
   // 如果没有找到一级标题
   if (!memoName) {
-    // 移除首行中的 '#文字' 标签
-    let lineWithoutTag = lines[0].replace(/#\S+/g, '').trim() || lines[1].replace(/#\S+/g, '').trim() || lines[2].replace(/#\S+/g, '').trim();
+    // 将头几行的文字作为标题
+    let lineWithoutTag = '';
+
+    // 逐个查找非空元素，直到找到非空元素或遍历完lines数组为止
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i]) {
+        lineWithoutTag = lines[i].replace(/#\S+/g, '').trim();
+        // 如果找到非空元素，则跳出循环
+        if (lineWithoutTag) {
+          break;
+        }
+
+      }
+
+      if (i > 2) {
+        break
+      }
+    }
+
     if (lineWithoutTag) {
       memoName = lineWithoutTag;
     }
   }
 
   if (memoName) {
+
     // 去除标题中的出链
     memoName = memoName.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '');
-    // 避免标题过长，截取第一句
-    let match = memoName.match(/.+?(，|——|。|？|！)/);  // 匹配直到第一个中文逗号、破折号、句号、问号、感叹号出现的所有字符
-    if (match) {
-      memoName = match[0].slice(0, -1);  // 移除收尾的中文逗号、破折号、句号、问号、感叹号
+
+    if (!haveHeadling) {
+      // 如果
+
+      // 避免标题过长，截取第一句
+      let match = memoName.match(/.+?(，|——|。|？|！)/);  // 匹配直到第一个中文逗号、破折号、句号、问号、感叹号出现的所有字符
+      if (match) {
+        memoName = match[0].slice(0, -1);  // 移除收尾的中文逗号、破折号、句号、问号、感叹号
+      }
     }
+
     memoName = memoName.replace(/[<>:"/\\|?*\s]/g, '');
     // 避免 name 重名
     let newName = memoName
@@ -265,7 +335,7 @@ function getMemoName(md: string, names: string[]) {
 
     }
 
-    if (memoName.replace(/\ /g, '').length < 1) {
+    if (memoName.trim().length === 0) {
       //名称只存在空格
       return null
     }
@@ -295,7 +365,21 @@ function getImageDataSourceValues(html: string): (string | null)[] {
 // html 转为 md 格式
 const htmlTomd = async (htmlString: string) => {
 
-  let markdownStr = html2md(htmlString);
+  let markdownStr = html2md(htmlString, {
+    skipTags: [
+      'label',
+      'div',
+      'html',
+      'body',
+      'nav',
+      'section',
+      'footer',
+      'main',
+      'aside',
+      'article',
+      'header'
+    ]
+  });
   // 标签
   markdownStr = markdownStr.replace(/\\#/g, '#');
   // 分隔线
