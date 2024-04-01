@@ -53,7 +53,7 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           });
 
           if (msg.options.exportTimeInfoValue) {
-            //创建时间、原始笔记信息
+            // 创建时间、原始笔记信息
             md += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
           }
 
@@ -110,27 +110,27 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
   let names: (string | null)[] = []
 
   const memosLength = (memoEls.length).toString().length
-  // 遍历每一个 "memo" 元素
+  // 遍历每一个 "memo" 元素，获取笔记信息
   for (let i = 0; i < memoEls.length; i++) {
     const memoEl = memoEls[i];
 
-    // 获取 "memo" 的 id 值，即 data-slug 属性的值
+    // 笔记 ID
     const id = memoEl.getAttribute('data-slug') || '';
 
-    // 获取 "memo" 元素中类名为 "time" 和 "richText" 的子元素
+    // 创建时间
     const timeEl = memoEl.querySelector('.time');
-    const richTextEl = memoEl.querySelector('.richText');
-
-    // 获取 "time" 和 "richText" 元素的文本内容
     const time = timeEl ? (timeEl as HTMLElement).innerText : '';
+    // time2 用来作为文件默认标题
+    const time2 = time.replace(/\D/g, '');
+
+    // 笔记正文
+    const richTextEl = memoEl.querySelector('.richText');
     let content = richTextEl ? richTextEl.innerHTML : '';
     // 转为 md 格式
     content = await htmlTomd(content)
-    //处理高亮
+    // 处理高亮，将 <mark> 标签替换为 ==
     content = content.replace(/<\/?mark>/g, '==');
-    // const md = await html2md(richText)
-    const time2 = time.replace(/\D/g, '');
-
+    
     // 处理文件序号
     const thisLength = (i + 1).toString().length
     let index = ''
@@ -144,13 +144,14 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
     name = time2 + '_' + index
 
     try {
+      // 用户设置了需要匹配标题时才会处理
       if (autoRecognizeNoteTitle) {
 
         // 处理文件名称
         const newName = getMemoName(content, names)
         name = newName ? newName : time2 + '_' + index
 
-        // 删除一级标题
+        // 删除一级标题，避免标题重复
         // 将输入的字符串以换行符分割为数组
         let lines = content.split('\n');
 
@@ -165,7 +166,7 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
             const hasMarkdownLink = markdownLinkRegex.test(line);
             if (hasMarkdownLink) {
               // 如果标题中包含链接
-              // 去除 # 符号
+              // 只去除 # 符号，保留标题的内容
               content = content.replace(line, line.substring(2))
             } else {
               // 删除正文中的标题信息，只保留文件名作为标题
@@ -180,20 +181,17 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
               content = contentLines.join('\n');
             }
 
-
-
             break
           }
         }
       }
     } catch (error) {
       console.log(error);
-
     }
 
     names.push(name)
 
-    // 获取图片
+    // 图片
     const filesEl = memoEl.querySelector('.files')
     const filesHTML = filesEl ? filesEl.innerHTML : ''
     const files = getImageDataSourceValues(filesHTML)
@@ -225,7 +223,7 @@ function replaceHref(md: string, memos: memoType[]) {
       const memoId = params.get('memo_id');
 
       if (memoId) {
-        // 找到 mention 的卡片 ID
+        // 找到 mention 的卡片
         let result: null | { index: number, memo: memoType } = null
 
         for (let i = 0; i < memos.length; i++) {

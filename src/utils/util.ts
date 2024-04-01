@@ -29,28 +29,29 @@ export const getUserInfo = (): Promise<userInfoType> => {
 
         console.log(result)
         console.log(!result.verified.verified && result.newLicenseKey === result.verified.key);
-        
+
         // 新设置的 key 和本地存储的不一样则重新远程查询
         if (result.newLicenseKey !== result.verified.key) {
           // 从远程查询
-          const url = 'https://6r4atckmdr.us.aircode.run/index'
-          const headers = { 'Authorization': 'Bearer ' + result.newLicenseKey, 'Content-Type': 'application/json', }
-
-          await fetch(url, {
-            headers: headers
-          }).then(async (response) => {
-
-            await response.json().then((data) => {
-              verified = data.verified  
-              console.log(verified);
-              
-
-              browser.storage.sync.set({
-                "verified": { key: result.newLicenseKey, verified: verified }
-              })
+          const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/validate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              license_key: result.newLicenseKey,
             })
+          });
+          const data = await response.json(); // 可以使用这个来进行额外的操作
 
+          verified = data.valid
+          console.log(verified);
+
+
+          browser.storage.sync.set({
+            "verified": { key: result.newLicenseKey, verified: verified }
           })
+
         }
 
 
