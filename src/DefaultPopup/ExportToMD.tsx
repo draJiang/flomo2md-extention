@@ -102,7 +102,7 @@ const ExportToMD = (props: ExportToMDProps) => {
                             marginRight: '2px'
                         }}
                         type='checkbox' onClick={() => {
-                        }} /> 自动识别笔记标题作为文件名
+                        }} /> 自动识别笔记标题作为文件名（BETA）
                 </div>
                 <div style={{
                     display: 'flex',
