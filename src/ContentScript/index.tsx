@@ -9,7 +9,7 @@ import { getUserInfo } from "../utils/util"
 import { memoType } from "../types"
 import { memo } from 'react';
 import { Options } from 'Options';
-
+import copy from 'copy-to-clipboard';
 
 let ANKI_INFO: any
 let USER_INFO: any
@@ -29,7 +29,7 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
   console.log('content script onMessage:');
   console.log(msg);
 
-  if (msg.type === 'flomo2md') {
+  if (msg.type === 'copy' || msg.type === 'export') {
     // 加载全部笔记
     let memos = document.getElementsByClassName('memos')[0];
     if (memos) {
@@ -47,10 +47,13 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           // 处理笔记中的双链
           let md = memo.content
           md = replaceHref(md, memoList)
+
           // 图片信息
-          memo.files.forEach((img, i) => {
-            md += `\n![image](images/${memo.time2}_${i + 1}.png)`
-          });
+          if (msg.type === 'export') {
+            memo.files.forEach((img, i) => {
+              md += `\n![image](images/${memo.time2}_${i + 1}.png)`
+            });
+          }
 
           if (msg.options.exportTimeInfoValue) {
             // 创建时间、原始笔记信息
@@ -69,8 +72,17 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
         })
 
         const newMemoList: Array<memoType> = await Promise.all(newMemoListPromises);
-        // 下载笔记
-        createZipFileFromMarkdownStrings(newMemoList, 'flomo2md')
+
+        if (msg.type === 'export') {
+          // 下载笔记
+          createZipFileFromMarkdownStrings(newMemoList, 'flomo2md')
+        }
+
+        if (msg.type === 'copy') {
+          // 复制笔记
+          handleCopyMarkdown(newMemoList)
+
+        }
       })
     }
 
@@ -125,12 +137,25 @@ async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
 
     // 笔记正文
     const richTextEl = memoEl.querySelector('.richText');
-    let content = richTextEl ? richTextEl.innerHTML : '';
+    // 处理笔记链接
+    // 克隆 richTextEl 以保留原始元素的状态
+    const newRichTextEl: Element = richTextEl!.cloneNode(true) as Element;
+    // 获取克隆后的所有 a 标签
+    const links = newRichTextEl.querySelectorAll('a');
+    // 遍历所有 a 标签
+    links.forEach(link => {
+      // 处理 MEMO 链接
+      if (link.className === 'inner_memo_link') {
+        link.href = 'https://flomoapp.com/mine/?memo_id=' + link.getAttribute('slug');
+      }
+    });
+
+    let content = newRichTextEl ? newRichTextEl.innerHTML : '';
     // 转为 md 格式
     content = await htmlTomd(content)
     // 处理高亮，将 <mark> 标签替换为 ==
     content = content.replace(/<\/?mark>/g, '==');
-    
+
     // 处理文件序号
     const thisLength = (i + 1).toString().length
     let index = ''
@@ -401,6 +426,7 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
   let imagesTasks: Promise<void>[] = [];
   // 遍历每一个 memo
   memos.forEach((memo, i) => {
+
     // 在 zip 文件中添加一个新的 md 文件
     const content = memo.content
     zip.file(`${memo.name}.md`, content);
@@ -418,7 +444,6 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
 
     });
 
-
   });
 
   // 等待所有图片下载完毕
@@ -427,4 +452,32 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
   // 生成 zip 文件并保存到用户设备
   const content = await zip.generateAsync({ type: 'blob' });
   FileSaver.saveAs(content, filename);
+}
+
+
+const handleCopyMarkdown = async (memos: memoType[]) => {
+
+  let markdown = ''
+
+  memos.forEach((memo, i) => {
+
+    // 在 zip 文件中添加一个新的 md 文件
+    let content = memo.content
+    // 下载图片
+    memo.files.forEach((imgUrl, i) => {
+
+      if (imgUrl) {
+        content += `\n![](${imgUrl})`
+      }
+
+    });
+    markdown += `\n\n---\n\n${content}`
+
+  });
+  console.log(markdown);
+
+  copy(markdown, { format: 'text' });
+
+  alert('复制成功')
+
 }

@@ -126,6 +126,8 @@ export const DefaultPopup = () => {
             <div id="DefaultPopup" style={{
                 width: '400px',
                 padding: '20px',
+                fontSize: '0.9rem',
+                color: '#323232',
                 fontFamily: 'din-round,sans-serif',
                 display: 'flex',
                 flexDirection: 'column',
@@ -137,13 +139,13 @@ export const DefaultPopup = () => {
                         textAlign: 'center',
                         display: "flex",
                         flexDirection: "column",
-                        alignItems: "center"
+                        alignItems: "left"
                     }}>
 
                     <div style={{
                         marginBottom: '4px',
                         opacity: '0.85',
-                        fontSize: '0.9rem'
+                        textAlign: 'left'
                     }}>
                         {verified ?
 
@@ -159,6 +161,7 @@ export const DefaultPopup = () => {
                     </div>
 
                     <ExportToMD verified={verified} />
+
                 </div>
 
                 <Divider />
