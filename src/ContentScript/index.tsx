@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
-
+import React, { useEffect, useState } from "react";
+import ReactDOM from "react-dom";
 // import htmlToMarkdown from '@wcj/html-to-markdown';
 import html2md from 'html-to-md'
 import JSZip from 'jszip';
@@ -10,6 +11,11 @@ import { memoType } from "../types"
 import { memo } from 'react';
 import { Options } from 'Options';
 import copy from 'copy-to-clipboard';
+
+import { message } from "antd";
+import { Action } from './Action'
+import { userInfoType } from "../types"
+
 
 let ANKI_INFO: any
 let USER_INFO: any
@@ -24,6 +30,45 @@ let USER_INFO: any
 // })()
 
 
+// 添加多选复制功能
+// 找到 .querybar 下的第一个 .action 元素
+window.onload = async () => {
+
+  const userInfo: userInfoType = await getUserInfo()
+
+  const flomoInput = document.querySelector('div.input');
+  const actionDiv = document.createElement('div')
+  flomoInput?.after(actionDiv)
+
+  if (actionDiv) {
+
+    ReactDOM.render(
+
+      <React.StrictMode>
+        <Action verified={userInfo.verified} />
+      </React.StrictMode >,
+
+      actionDiv
+    );
+
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse) {
 
   console.log('content script onMessage:');
@@ -35,8 +80,12 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
     if (memos) {
 
       autoScroll(memos as HTMLElement, msg.verified).then(async () => {
+        // 获取所有 Memo 的 DOM
+
+        const memoEls: HTMLElement[] = Array.from(document.getElementsByClassName('memo') as HTMLCollectionOf<HTMLElement>);
+
         // 解析笔记
-        let memoList: Array<memoType> = await getMemos(msg.options.autoRecognizeNoteTitle)
+        let memoList: Array<memoType> = await setMemos(memoEls, msg.options.autoRecognizeNoteTitle)
 
         if (!msg.verified) {
           //未激活
@@ -112,9 +161,9 @@ function autoScroll(memos: HTMLElement, verified: boolean): Promise<void> {
 }
 
 // 获取笔记
-async function getMemos(autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
+export async function setMemos(memoEls: HTMLElement[], autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
   // 获取所有 className 为 "memo" 的 div 元素
-  const memoEls = document.getElementsByClassName('memo');
+  // const memoEls = document.getElementsByClassName('memo');
 
   // 创建一个数组来保存解析后的 memo 对象
   const memos = [];
@@ -454,9 +503,8 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
   FileSaver.saveAs(content, filename);
 }
 
-
-const handleCopyMarkdown = async (memos: memoType[]) => {
-
+// 复制笔记
+export const handleCopyMarkdown = async (memos: memoType[]) => {
   let markdown = ''
 
   memos.forEach((memo, i) => {
@@ -471,13 +519,19 @@ const handleCopyMarkdown = async (memos: memoType[]) => {
       }
 
     });
-    markdown += `\n\n---\n\n${content}`
+    if (i === 0) {
+      markdown += `\n\n${content}`
+    } else {
+      markdown += `\n\n---\n\n${content}`
+    }
+
 
   });
   console.log(markdown);
 
   copy(markdown, { format: 'text' });
 
-  alert('复制成功')
+  message.success('已复制');
+
 
 }
