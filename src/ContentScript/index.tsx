@@ -6,7 +6,7 @@ import html2md from 'html-to-md'
 import JSZip from 'jszip';
 import FileSaver from 'file-saver';
 
-import { getUserInfo } from "../utils/util"
+// import { getUserInfo } from "../utils/util"
 import { memoType } from "../types"
 import { memo } from 'react';
 import { Options } from 'Options';
@@ -33,9 +33,9 @@ let USER_INFO: any
 // 添加多选复制功能
 // 找到 .querybar 下的第一个 .action 元素
 window.onload = async () => {
-
-  const userInfo: userInfoType = await getUserInfo()
-
+  const userInfo = await browser.runtime.sendMessage({ 'type': 'getUserInfo', 'messages': {}, })
+  console.log('userInfo:');
+  console.log(userInfo);
   const flomoInput = document.querySelector('div.input');
   const actionDiv = document.createElement('div')
   flomoInput?.after(actionDiv)

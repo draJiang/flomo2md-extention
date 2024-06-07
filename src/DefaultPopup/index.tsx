@@ -3,11 +3,13 @@ import browser from 'webextension-polyfill'
 import React, { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom";
 
-import { getUserInfo, getSettings } from "../utils/util"
+import { getSettings } from "../utils/util"
 
 import ExportToMD from "./ExportToMD";
+import { BuyLicenseKeyDrawer } from "./BuyLicenseKey"
 import { Button, Divider, Input, IconLink } from "../Components/UIKit";
 
+import { Drawer } from "antd";
 
 import '../index.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -24,43 +26,29 @@ export const DefaultPopup = () => {
     const [verified, setVerified] = useState<boolean | null>(null);
     const inputRef = useRef<HTMLInputElement>(null); // 创建 ref，指定类型为 HTMLInputElement
     const [inputValue, setInputValue] = useState('');
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const apiDataRef = useRef([]);
 
     useEffect(() => {
+        (async () => {
 
-        // // 获取错题
-        // const getMistakes = browser.storage.local.get({ "mistakes": [] })
-        // getMistakes.then((result) => {
+            thisGetUserStatus()
 
-        //     console.log(result);
-        //     setMistakes(result.mistakes)
+            getSettings().then(async (items) => {
+                // setOpenApiKey(items.openApiKey ?? null);
+                console.log(items);
+                setInputValue(items.newLicenseKey);
+            })
 
-        //     // 处理 Excel 数据
-        //     apiDataRef.current = result.mistakes.map((mistake: { note: { fields: { Back: string, Front: string } } }) => {
+            // getUserInfo().then((userInfo: userInfoType) => {
 
-        //         return { 'Front': mistake.note.fields.Front, 'Back': mistake.note.fields.Back }
+            //     // 更新 UI
+            //     setVerified(userInfo.verified)
 
-        //     })
+            // })
+        })()
 
-        //     console.log(apiDataRef.current);
-
-
-        // })
-
-        getSettings().then(async (items) => {
-            // setOpenApiKey(items.openApiKey ?? null);
-            console.log(items);
-            setInputValue(items.newLicenseKey);
-
-        })
-
-        getUserInfo().then((userInfo: userInfoType) => {
-
-            // 更新 UI
-            setVerified(userInfo.verified)
-
-        })
 
     }, []);
 
@@ -107,8 +95,11 @@ export const DefaultPopup = () => {
 
         return new Promise((resolve, reject) => {
             setVerified(null)
-            getUserInfo().then((userInfo: userInfoType) => {
 
+
+            browser.runtime.sendMessage({ 'type': 'getUserInfo', 'messages': {}, }).then((userInfo: userInfoType) => {
+                console.log('thisGetUserStatus');
+                console.log(userInfo);
                 // 更新 UI
                 setVerified(userInfo.verified)
 
@@ -205,11 +196,20 @@ export const DefaultPopup = () => {
                                 style={{ marginBottom: '20px' }}
                             >激活</Button>
 
-                            <Button
+                            {/* <Button
                                 type="link"
                                 style={{ marginBottom: '20px' }}
                                 onClick={() => window.open('https://jiang.lemonsqueezy.com/checkout/buy/c4574683-821d-4a8f-9ec0-f3dff3a1d01d')}
+                            >获取激活码</Button> */}
+
+                            <Button
+                                type="link"
+                                style={{ marginBottom: '20px' }}
+                                onClick={() => setDrawerOpen(true)}
                             >获取激活码</Button>
+                            <Drawer placement={'bottom'} height={450} title="获取激活码" onClose={() => setDrawerOpen(false)} open={drawerOpen}>
+                                <BuyLicenseKeyDrawer />
+                            </Drawer>
 
                             {/* <Button
                                 type="link"

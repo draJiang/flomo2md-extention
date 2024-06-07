@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "flomo2md",
     "description": "Export Flomo notes to Markdown file.",
-    "version": "0.7.1",
+    "version": "0.7.4",
     "action": {
         "default_icon": "icon48.png",
         "default_popup": "popup.html"
@@ -28,6 +28,7 @@
         "storage"
     ],
     "host_permissions": [
+        "https://api.scouter.dabing.one/*",
         "https://v.flomoapp.com/*"
     ]
 }
