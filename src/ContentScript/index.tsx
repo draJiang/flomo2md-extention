@@ -200,8 +200,13 @@ export async function setMemos(memoEls: HTMLElement[], autoRecognizeNoteTitle: b
     });
 
     let content = newRichTextEl ? newRichTextEl.innerHTML : '';
+
     // 转为 md 格式
     content = await htmlTomd(content)
+    // // 是否显示笔记创建时间和原始链接
+    // if (showExportTimeInfoValue) {
+    //   content += `\n\n[${time}](https://flomoapp.com/mine/?memo_id=${id})`
+    // }
     // 处理高亮，将 <mark> 标签替换为 ==
     content = content.replace(/<\/?mark>/g, '==');
 
@@ -504,14 +509,14 @@ const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: str
 }
 
 // 复制笔记
-export const handleCopyMarkdown = async (memos: memoType[]) => {
+export const handleCopyMarkdown = async (memos: memoType[], showExportTimeInfoValue?: boolean) => {
   let markdown = ''
 
   memos.forEach((memo, i) => {
 
-    // 在 zip 文件中添加一个新的 md 文件
+
     let content = memo.content
-    // 下载图片
+    // 图片
     memo.files.forEach((imgUrl, i) => {
 
       if (imgUrl) {
@@ -519,6 +524,12 @@ export const handleCopyMarkdown = async (memos: memoType[]) => {
       }
 
     });
+
+    if (showExportTimeInfoValue) {
+      // 创建时间、原始笔记信息
+      content += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+    }
+
     if (i === 0) {
       markdown += `\n\n${content}`
     } else {

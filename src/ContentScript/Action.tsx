@@ -207,7 +207,7 @@ export function Action(props: { verified: boolean }) {
                                         onClick={async () => {
 
                                             const memos = await setMemos(selectMemo, false)
-                                            handleCopyMarkdown(memos)
+                                            handleCopyMarkdown(memos, true)
 
                                             // 关闭多选状态
                                             removeCheckbox()
