@@ -85,42 +85,44 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
         const memoEls: HTMLElement[] = Array.from(document.getElementsByClassName('memo') as HTMLCollectionOf<HTMLElement>);
 
         // 解析笔记
-        let memoList: Array<memoType> = await setMemos(memoEls, msg.options.autoRecognizeNoteTitle)
+        let memoList: Array<memoType> = await getMemosFromDom(memoEls, msg.options.autoRecognizeNoteTitle)
 
         if (!msg.verified) {
           //未激活
           memoList = memoList.slice(0, 20);
         }
 
-        const newMemoListPromises = memoList.map(async memo => {
-          // 处理笔记中的双链
-          let md = memo.content
-          md = replaceHref(md, memoList)
+        // const newMemoListPromises = memoList.map(async memo => {
+        //   // 处理笔记中的双链
+        //   let md = memo.content
+        //   md = replaceHref(md, memoList)
 
-          // 图片信息
-          if (msg.type === 'export') {
-            memo.files.forEach((img, i) => {
-              md += `\n![image](images/${memo.time2}_${i + 1}.png)`
-            });
-          }
+        //   // 图片信息
+        //   if (msg.type === 'export') {
+        //     memo.files.forEach((img, i) => {
+        //       md += `\n![image](images/${memo.time2}_${i + 1}.png)`
+        //     });
+        //   }
 
-          if (msg.options.exportTimeInfoValue) {
-            // 创建时间、原始笔记信息
-            md += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
-          }
+        //   if (msg.options.exportTimeInfoValue) {
+        //     // 创建时间、原始笔记信息
+        //     md += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+        //   }
 
-          return {
-            id: memo.id,
-            name: memo.name,
-            index: memo.index,
-            time: memo.time,
-            time2: memo.time2,
-            content: md,
-            files: memo.files
-          }
-        })
+        //   return {
+        //     id: memo.id,
+        //     name: memo.name,
+        //     index: memo.index,
+        //     time: memo.time,
+        //     time2: memo.time2,
+        //     content: md,
+        //     files: memo.files
+        //   }
+        // })
 
-        const newMemoList: Array<memoType> = await Promise.all(newMemoListPromises);
+        // const newMemoList: Array<memoType> = await Promise.all(newMemoListPromises);
+
+        const newMemoList = await setupMemo(memoList, msg.options.exportTimeInfoValue,msg.type);
 
         if (msg.type === 'export') {
           // 下载笔记
@@ -138,6 +140,7 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
   }
 
 })
+
 
 // 自动滚动列表
 function autoScroll(memos: HTMLElement, verified: boolean): Promise<void> {
@@ -161,7 +164,7 @@ function autoScroll(memos: HTMLElement, verified: boolean): Promise<void> {
 }
 
 // 获取笔记
-export async function setMemos(memoEls: HTMLElement[], autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
+export async function getMemosFromDom(memoEls: HTMLElement[], autoRecognizeNoteTitle: boolean): Promise<memoType[]> {
   // 获取所有 className 为 "memo" 的 div 元素
   // const memoEls = document.getElementsByClassName('memo');
 
@@ -276,6 +279,41 @@ export async function setMemos(memoEls: HTMLElement[], autoRecognizeNoteTitle: b
 
   return memos;
 }
+
+export async function setupMemo(memos: memoType[],isExportTimeInfoValue:boolean,type:'export'|'copy') {
+
+  const newMemoListPromises = memos.map(async memo => {
+    // 处理笔记中的双链
+    let md = memo.content
+    md = replaceHref(md, memos)
+
+    // 图片信息
+    if (type === 'export') {
+      memo.files.forEach((img, i) => {
+        md += `\n![image](images/${memo.time2}_${i + 1}.png)`
+      });
+    }
+
+    if (isExportTimeInfoValue) {
+      // 创建时间、原始笔记信息
+      md += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+    }
+
+    return {
+      id: memo.id,
+      name: memo.name,
+      index: memo.index,
+      time: memo.time,
+      time2: memo.time2,
+      content: md,
+      files: memo.files
+    }
+  })
+
+  const newMemoList: Array<memoType> = await Promise.all(newMemoListPromises);
+  return newMemoList
+
+};
 
 // 处理笔记中的链接
 function replaceHref(md: string, memos: memoType[]) {
@@ -469,7 +507,7 @@ const htmlTomd = async (htmlString: string) => {
 }
 
 // 下载笔记
-const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: string) => {
+export const createZipFileFromMarkdownStrings = async (memos: memoType[], filename: string) => {
   const zip = new JSZip();
   // 存放所有图片下载任务的数组
   let imagesTasks: Promise<void>[] = [];
