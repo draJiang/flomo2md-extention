@@ -6,36 +6,19 @@ import html2md from 'html-to-md'
 import JSZip from 'jszip';
 import FileSaver from 'file-saver';
 
-import { getUserInfo } from "../utils/util"
+// import { getUserInfo } from "../utils/util"
 import { memoType } from "../types"
-import { memo } from 'react';
-import { Options } from 'Options';
 import copy from 'copy-to-clipboard';
 
 import { message } from "antd";
 import { Action } from './Action'
-import { userInfoType } from "../types"
-
-
-let ANKI_INFO: any
-let USER_INFO: any
-
-// (async () => {
-//   // 获取用户信息
-//   USER_INFO = await getUserInfo()
-
-//   console.log('USER_INFO:');
-//   console.log(USER_INFO);
-
-// })()
-
 
 // 添加多选复制功能
 // 找到 .querybar 下的第一个 .action 元素
 window.onload = async () => {
-
-  const userInfo: userInfoType = await getUserInfo()
-
+  const userInfo = await browser.runtime.sendMessage({ 'type': 'getUserInfo', 'messages': {}, })
+  console.log('userInfo:');
+  console.log(userInfo);
   const flomoInput = document.querySelector('div.input');
   const actionDiv = document.createElement('div')
   flomoInput?.after(actionDiv)
@@ -91,36 +74,6 @@ browser.runtime.onMessage.addListener(async function (msg, sender, sendResponse)
           //未激活
           memoList = memoList.slice(0, 20);
         }
-
-        // const newMemoListPromises = memoList.map(async memo => {
-        //   // 处理笔记中的双链
-        //   let md = memo.content
-        //   md = replaceHref(md, memoList)
-
-        //   // 图片信息
-        //   if (msg.type === 'export') {
-        //     memo.files.forEach((img, i) => {
-        //       md += `\n![image](images/${memo.time2}_${i + 1}.png)`
-        //     });
-        //   }
-
-        //   if (msg.options.exportTimeInfoValue) {
-        //     // 创建时间、原始笔记信息
-        //     md += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
-        //   }
-
-        //   return {
-        //     id: memo.id,
-        //     name: memo.name,
-        //     index: memo.index,
-        //     time: memo.time,
-        //     time2: memo.time2,
-        //     content: md,
-        //     files: memo.files
-        //   }
-        // })
-
-        // const newMemoList: Array<memoType> = await Promise.all(newMemoListPromises);
 
         const newMemoList = await setupMemo(memoList, msg.options.exportTimeInfoValue,msg.type);
 
@@ -203,8 +156,13 @@ export async function getMemosFromDom(memoEls: HTMLElement[], autoRecognizeNoteT
     });
 
     let content = newRichTextEl ? newRichTextEl.innerHTML : '';
+
     // 转为 md 格式
     content = await htmlTomd(content)
+    // // 是否显示笔记创建时间和原始链接
+    // if (showExportTimeInfoValue) {
+    //   content += `\n\n[${time}](https://flomoapp.com/mine/?memo_id=${id})`
+    // }
     // 处理高亮，将 <mark> 标签替换为 ==
     content = content.replace(/<\/?mark>/g, '==');
 
@@ -316,6 +274,19 @@ export async function setupMemo(memos: memoType[],isExportTimeInfoValue:boolean,
 };
 
 // 处理笔记中的链接
+/**
+ * Replaces flomo internal links in the given markdown string with memo titles.
+ *
+ * @param {string} md - The markdown string containing flomo internal links.
+ * @param {memoType[]} memos - An array of memo objects to find and replace links with their titles.
+ * @returns {string} - The updated markdown string with flomo links replaced by memo titles.
+ *
+ * The function performs the following steps:
+ * 1. Finds all flomo internal links in the markdown string using a regular expression.
+ * 2. Extracts the memo_id from each link.
+ * 3. Searches for the corresponding memo in the memos array using the memo_id.
+ * 4. Replaces the link in the markdown string with the memo title if found.
+ */
 function replaceHref(md: string, memos: memoType[]) {
   let newMD = md
   // 找到 flomo 内部的链接
@@ -364,7 +335,7 @@ function replaceHref(md: string, memos: memoType[]) {
 
 // 处理笔记标题
 function getMemoName(md: string, names: (string | null)[]) {
-  let haveHeadling = false
+  let haveHeadling = false;
   // 从笔记内容中提取名称信息
   let memoName = null
   // 将输入的字符串以换行符分割为数组
@@ -542,14 +513,14 @@ export const createZipFileFromMarkdownStrings = async (memos: memoType[], filena
 }
 
 // 复制笔记
-export const handleCopyMarkdown = async (memos: memoType[]) => {
+export const handleCopyMarkdown = async (memos: memoType[], showExportTimeInfoValue?: boolean) => {
   let markdown = ''
 
   memos.forEach((memo, i) => {
 
-    // 在 zip 文件中添加一个新的 md 文件
+
     let content = memo.content
-    // 下载图片
+    // 图片
     memo.files.forEach((imgUrl, i) => {
 
       if (imgUrl) {
@@ -557,6 +528,12 @@ export const handleCopyMarkdown = async (memos: memoType[]) => {
       }
 
     });
+
+    if (showExportTimeInfoValue) {
+      // 创建时间、原始笔记信息
+      content += `\n\n[${memo.time}](https://flomoapp.com/mine/?memo_id=${memo.id})`
+    }
+
     if (i === 0) {
       markdown += `\n\n${content}`
     } else {

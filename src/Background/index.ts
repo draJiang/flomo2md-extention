@@ -60,14 +60,19 @@ browser.runtime.onInstalled.addListener(function () {
 
 // })
 
+
+
 // 长连接，处理 Content Script 发来的消息
 browser.runtime.onConnect.addListener(port => {
     // 收到 content script 消息
     console.log('连接中------------')
 
+
     // 接收 content script 的消息
     port.onMessage.addListener(async (msg: any) => {
         console.log('接收消息：', msg)
+
+
     })
 })
 
@@ -86,6 +91,15 @@ function handleMessage(request: any, sender: any, sendResponse: any) {
             console.error(error);
         }
     };
+
+    if (request.type === 'getUserInfo') {
+        (async () => {
+            const userInfo = await getUserInfo()
+            asyncSendResponse(userInfo)
+        })()
+
+        return true;
+    }
 
 }
 

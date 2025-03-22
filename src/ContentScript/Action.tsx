@@ -167,8 +167,8 @@ export function Action(props: { verified: boolean }) {
         height: '48px',
         borderRadius: '48px',
         position: 'fixed',
-        bottom: '20px',
-        right: '80px',
+        bottom: '180px',
+        right: '20px',
         display: 'flex',
         gap: '10px',
         alignItems: 'center',
@@ -256,6 +256,45 @@ export function Action(props: { verified: boolean }) {
                                 <Tooltip.Portal>
                                     <Tooltip.Content className="TooltipContent" sideOffset={15}>
                                         下载
+                                        <Tooltip.Arrow className="TooltipArrow" />
+                                    </Tooltip.Content>
+                                </Tooltip.Portal>
+                            </Tooltip.Root>
+                        </Tooltip.Provider>
+
+
+                        <Tooltip.Provider>
+                            <Tooltip.Root delayDuration={500}>
+                                <Tooltip.Trigger asChild>
+
+                                    <button
+                                        style={{
+                                            ...buttonStyle,
+                                            // pointerEvents: selectMemo.current.length === 0 ? "none" : undefined
+                                        }}
+                                        onClick={async () => {
+
+                                            const memoList = await getMemosFromDom(selectMemo, true);
+                                            const memos = await setupMemo(memoList,false,'export');
+                                            createZipFileFromMarkdownStrings(memos,'flomo2md')
+
+                                            // 关闭多选状态
+                                            removeCheckbox()
+
+
+                                        }}>
+                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M9.00045 1.25977C9.29869 1.25977 9.54045 1.50153 9.54045 1.79977V10.0961L12.2187 7.41792C12.4295 7.20704 12.7714 7.20704 12.9822 7.41792C13.1932 7.62881 13.1932 7.97072 12.9822 8.18161L9.38229 11.7816C9.1714 11.9925 8.8295 11.9925 8.61861 11.7816L5.01861 8.18161C4.80772 7.97072 4.80772 7.62881 5.01861 7.41792C5.2295 7.20704 5.5714 7.20704 5.78229 7.41792L8.46045 10.0961V1.79977C8.46045 1.50153 8.70221 1.25977 9.00045 1.25977ZM3.00039 11.9998C3.33176 11.9998 3.60039 12.2685 3.60039 12.5998V14.3998C3.60039 15.0645 4.13517 15.5998 4.79601 15.5998H13.2018C13.8639 15.5998 14.4004 15.0631 14.4004 14.3998V12.5998C14.4004 12.2685 14.6691 11.9998 15.0004 11.9998C15.3317 11.9998 15.6004 12.2685 15.6004 12.5998V14.3998C15.6004 15.7247 14.5278 16.7998 13.2018 16.7998H4.79601C3.46862 16.7998 2.40039 15.7234 2.40039 14.3998V12.5998C2.40039 12.2685 2.66902 11.9998 3.00039 11.9998Z" fill="#9D9D9D"/>
+                                        <rect x="10.15" y="10.15" width="7.7" height="7.7" rx="3.85" fill="white"/>
+                                        <rect x="10.15" y="10.15" width="7.7" height="7.7" rx="3.85" stroke="#EDECEE" stroke-width="0.3"/>
+                                        <path d="M14.0674 16L14.7833 11.6364H15.4651L14.7492 16H14.0674ZM12.1135 14.9176L12.2265 14.2358H15.6356L15.5226 14.9176H12.1135ZM12.5333 16L13.2492 11.6364H13.931L13.2151 16H12.5333ZM12.3628 13.4006L12.4779 12.7188H15.887L15.7719 13.4006H12.3628Z" fill="black"/>
+                                        </svg>
+                                    </button>
+
+                                </Tooltip.Trigger>
+                                <Tooltip.Portal>
+                                    <Tooltip.Content className="TooltipContent" sideOffset={15}>
+                                        下载（识别标题）
                                         <Tooltip.Arrow className="TooltipArrow" />
                                     </Tooltip.Content>
                                 </Tooltip.Portal>
